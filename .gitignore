@@ -1,0 +1,10 @@
+dist/
+*.egg-info/
+*.xml
+
+.idea
+.venv
+
+*.swp
+
+*/__pycache__/

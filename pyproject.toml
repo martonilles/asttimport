@@ -1,0 +1,16 @@
+[project]
+name = "asttimport"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "pydantic-xml[lxml]>=2.18.0",
+    "python-calamine>=0.6.1",
+]
+
+[project.scripts]
+asttimporter = "asttimport.main:main"
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=75.0"]
