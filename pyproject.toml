@@ -14,3 +14,8 @@ asttimporter = "asttimport.main:main"
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = ["setuptools>=75.0"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.11",
+]
