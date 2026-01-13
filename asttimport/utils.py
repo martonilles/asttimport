@@ -4,6 +4,7 @@ from collections import defaultdict
 def clean_id(base: str) -> str:
     return base.replace(".", "-").replace(" ", "-").replace("/", "-")
 
+
 DAYS = {
     "H": 0,
     "K": 1,
@@ -17,6 +18,7 @@ PREF_MAP = {
     "?": "?",
     "-": "0",
 }
+
 
 def parse_timeslots(data: str) -> dict[int, dict[int, str]]:
     timeslots = defaultdict(lambda: defaultdict(lambda: "1"))

@@ -6,6 +6,7 @@ from asttimport.utils import clean_id
 
 TIMESLOTS = dict[int, dict[int, str]]
 
+
 class ClassroomType(Enum):
     NORMAL = "normal"
     INFO = "info"
@@ -33,6 +34,7 @@ class Teacher:
     def id(self):
         return clean_id(f"T_{self.username}")
 
+
 @dataclasses.dataclass
 class Classroom:
     name: str
@@ -42,6 +44,7 @@ class Classroom:
     @property
     def id(self):
         return clean_id(f"CR_{self.name}")
+
 
 @dataclasses.dataclass
 class Class:
@@ -82,6 +85,7 @@ class Group:
     def __hash__(self):
         return hash(self.id)
 
+
 @dataclasses.dataclass
 class Assignment:
     subject: Subject
@@ -94,7 +98,9 @@ class Assignment:
 
     def __post_init__(self):
         if self.class_ is None and not self.groups:
-            raise ValueError(f"Assignment must have at least one group when class is not set: {self}")
+            raise ValueError(
+                f"Assignment must have at least one group when class is not set: {self}"
+            )
 
     @property
     def id(self):
