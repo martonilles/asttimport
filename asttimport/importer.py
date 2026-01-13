@@ -147,4 +147,4 @@ class ExcelImporter:
         headers = data[0]
         rows = data[1:]
 
-        return [dict(zip(headers, row)) for row in rows]
+        return [dict(zip(headers, row)) for row in rows if row[0]]
