@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic_xml import BaseXmlModel, attr, RootXmlModel, element
+from pydantic_xml import BaseXmlModel, attr
 
 from asttimport.importer import ExcelImporter
 
