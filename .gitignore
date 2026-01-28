@@ -1,6 +1,7 @@
 dist/
 *.egg-info/
 *.xml
+*.json
 
 .idea
 .venv

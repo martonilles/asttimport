@@ -28,10 +28,13 @@ CLASSROMTYPE_MAPPING = {
 
 
 class ExcelImporter:
-    def __init__(self, path: Path):
-        self.path = path
-
-        workbook = CalamineWorkbook.from_path(path)
+    def __init__(self, path: Path | None = None, data=None):
+        if path is not None:
+            workbook = CalamineWorkbook.from_path(path)
+        elif data is not None:
+            workbook = CalamineWorkbook.from_filelike(data)
+        else:
+            return
 
         self.classrooms = {
             classrom.name: classrom
