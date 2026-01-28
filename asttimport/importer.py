@@ -73,16 +73,19 @@ class ExcelImporter:
     def _import_class(self, worksheet: CalamineSheet) -> Iterable[Class]:
         data = self._convert_to_named_list(worksheet)
         for row in data:
-            yield Class(
-                grade=row["Évfolyam"],
-                name=row["Osztály"],
-                classroom=self.classrooms[row["Terem"]],
-                teachers=[
-                    self.teachers[teacher_name.strip()]
-                    for teacher_name in row["Tanár"].split(",")
-                ],
-                timeslots=parse_timeslots(row["Órapreferencia"]),
-            )
+            try:
+                yield Class(
+                    grade=row["Évfolyam"],
+                    name=row["Osztály"],
+                    classroom=self.classrooms[row["Terem"]],
+                    teachers=[
+                        self.teachers[teacher_name.strip()]
+                        for teacher_name in row["Tanár"].split(",")
+                    ],
+                    timeslots=parse_timeslots(row["Órapreferencia"]),
+                )
+            except KeyError as e:
+                print(f"MISSING {e}")
 
     def _import_assignments(
         self, worksheet: CalamineSheet
@@ -124,22 +127,25 @@ class ExcelImporter:
                     timeslots=parse_timeslots(row["Órapreferencia"]),
                 ),
             )
-            assignments.append(
-                Assignment(
-                    grade=grade,
-                    subject=subject,
-                    class_=class_,
-                    classroom_type=CLASSROMTYPE_MAPPING.get(row["Terem tipus"])
-                    if row["Terem tipus"] not in ("",)
-                    else None,
-                    weekly_count=row["Óraszám"],
-                    teachers=[
-                        self.teachers[teacher_name.strip()]
-                        for teacher_name in row["Tanár"].split(",")
-                    ],
-                    groups=groups,
+            try:
+                assignments.append(
+                    Assignment(
+                        grade=grade,
+                        subject=subject,
+                        class_=class_,
+                        classroom_type=CLASSROMTYPE_MAPPING.get(row["Terem tipus"])
+                        if row["Terem tipus"] not in ("",)
+                        else None,
+                        weekly_count=row["Óraszám"],
+                        teachers=[
+                            self.teachers[teacher_name.strip()]
+                            for teacher_name in row["Tanár"].split(",")
+                        ],
+                        groups=groups,
+                    )
                 )
-            )
+            except KeyError as e:
+                print(f"MISSING {e}")
 
         return assignments, list(subjects.values()), list(all_groups)
 
