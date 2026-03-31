@@ -28,7 +28,10 @@ class Teacher:
 
     @property
     def username(self):
-        return self.email.split("@")[0]
+        if self.email:
+            return self.email.split("@")[0]
+
+        return "".join([p[:2] for p in self.name.split(" ")])
 
     @property
     def id(self):
@@ -38,7 +41,7 @@ class Teacher:
 @dataclasses.dataclass
 class Classroom:
     name: str
-    type: ClassroomType
+    type: str
     timeslots: TIMESLOTS
 
     @property
@@ -48,15 +51,24 @@ class Classroom:
 
 @dataclasses.dataclass
 class Class:
+    ref_name: str
     name: str
     grade: int
     teachers: list[Teacher]
-    classroom: Classroom
+    classroom: Classroom | None
     timeslots: TIMESLOTS
 
     @property
     def id(self):
         return clean_id(f"C_{self.name}")
+
+
+@dataclasses.dataclass
+class MetaClass:
+    ref_name: str
+    grade: int
+    class_names: list[str]
+    classes: list[Class]
 
 
 @dataclasses.dataclass
@@ -76,6 +88,7 @@ class Group:
 
     @property
     def base(self):
+        assert isinstance(self.name, str), self
         return self.name.split("/")[0]
 
     @property
@@ -90,7 +103,7 @@ class Group:
 class Assignment:
     subject: Subject
     teachers: list[Teacher]
-    classroom_type: ClassroomType | None
+    classroom_type: str | None
     grade: int
     class_: Class | None
     groups: list[Group]

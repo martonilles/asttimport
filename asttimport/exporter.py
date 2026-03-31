@@ -110,7 +110,7 @@ class Exporter:
         self.teachers = importer.teachers
         self.classes = importer.classes
         self.classrooms = importer.classrooms
-        self.subjects = importer.subjects
+        self.subjects = importer.subjects.values()
         self.groups = importer.groups
         self.assignments = importer.assignments
 
@@ -136,7 +136,9 @@ class Exporter:
                 name=f"{int(class_.grade)}. {class_.name}",
                 short=class_.name,
                 grade=class_.grade,
-                classroomids=class_.classroom.id,
+                classroomids=class_.classroom.id
+                if class_.classroom is not None
+                else "",
             )
             for class_ in self.classes.values()
         ]

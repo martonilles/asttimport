@@ -22,9 +22,7 @@ def authenticate():
     return build("drive", "v3", credentials=credentials)
 
 
-def get_timetable_excel(file_id):
-    service = authenticate()
-
+def get_timetable_excel(service, name, file_id):
     try:
         request = service.files().export_media(
             fileId=file_id,
@@ -35,7 +33,7 @@ def get_timetable_excel(file_id):
         downloader = MediaIoBaseDownload(fh, request)
 
         done = False
-        print("Downloading...")
+        print(f"Downloading {name} ({file_id})...")
         while not done:
             status, done = downloader.next_chunk()
             if status:
