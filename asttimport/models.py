@@ -1,4 +1,5 @@
 import dataclasses
+import uuid
 from enum import Enum
 
 from asttimport.utils import clean_id
@@ -31,7 +32,7 @@ class Teacher:
         if self.email:
             return self.email.split("@")[0]
 
-        return "".join([p[:2] for p in self.name.split(" ")])
+        return "".join([p[:3] for p in self.name.split(" ")])
 
     @property
     def id(self):
@@ -117,6 +118,7 @@ class Assignment:
 
     @property
     def id(self):
+        return str(uuid.uuid4())
         if self.class_ is not None:
             base = f"A_{int(self.class_.grade)}_{self.class_.name}_{self.subject.name}"
         else:

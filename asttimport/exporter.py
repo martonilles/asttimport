@@ -156,7 +156,9 @@ class Exporter:
                 divisiontag=group.base,
                 entireclass="0",
             )
-            for group in self.groups
+            for group in sorted(
+                self.groups, key=lambda group: (group.class_.id, group.base)
+            )
         ]
 
         lessons = [
