@@ -1,4 +1,6 @@
+from collections import defaultdict
 from typing import Iterable, Any
+import datetime as dt
 
 from python_calamine import CalamineWorkbook, CalamineSheet
 
@@ -10,15 +12,21 @@ from asttimport.models import (
     Subject,
     Group,
     MetaClass,
+    Term,
 )
-from asttimport.utils import parse_timeslots, info, error
+from asttimport.utils import parse_timeslots, info, error, warning, FACT_TIMESLOTS
 
 
 class ExcelImporter:
     def __init__(self, base_data, assignment_excels_data):
         base_workbook = CalamineWorkbook.from_filelike(base_data)
 
-        # Tantárgy
+        self.subjects = {
+            subject.name: subject
+            for subject in self._import_subjects(
+                base_workbook.get_sheet_by_name("Tantárgy")
+            )
+        }
 
         self.classrooms = {
             classrom.name: classrom
@@ -40,7 +48,6 @@ class ExcelImporter:
         self._import_class(base_workbook.get_sheet_by_name("Osztály"))
 
         self.assignments: list[Assignment] = []
-        self.subjects: dict[str, Subject] = {}
         self.groups: set[Group] = set()
 
         for name, data in assignment_excels_data.items():
@@ -48,6 +55,84 @@ class ExcelImporter:
             info(f"Importing {name}...")
             self.assignments.extend(
                 self._import_assignments(workbook.get_sheet_by_name("Beosztás"))
+            )
+
+        self._remap_assignment_subjects()
+
+    def _remap_assignment_subjects(self):
+        subject_timeslots_assignments = defaultdict(lambda: defaultdict(list))
+
+        for assignment in self.assignments:
+            subject_timeslots_assignments[assignment.subject][
+                assignment.timeslots
+            ].append(assignment)
+
+        for subject, timeslots in subject_timeslots_assignments.items():
+            if len(timeslots) > 1:
+                info(f"Multiple timeslots: {subject.name} -> {timeslots.keys()}")
+                # print(" * ", subject.timeslots)
+                # for timeslot, assignments in timeslots.items():
+                #     print(" - ", timeslot, {c.grade for a in assignments for c in a.classes}, {c.name for a in assignments for c in a.classes})
+
+                timeslot_grades = {
+                    timeslot: {c.grade for a in assignments for c in a.classes}
+                    for timeslot, assignments in timeslots.items()
+                }
+
+                are_disjoints = sum(map(len, timeslot_grades.values())) == len(
+                    set().union(*timeslot_grades.values())
+                )
+
+                if are_disjoints:
+                    # NEED TO TEST FOR CLASS
+                    info("- Mutating subjects")
+                    for timeslot, assignments in timeslots.items():
+                        if timeslot == subject.timeslots:
+                            info(
+                                f"  - Keeping timeslot as same as subject {timeslot} {timeslot_grades[timeslot]}"
+                            )
+                        else:
+                            new_name = f"{subject.name} ({','.join([str(grade) for grade in timeslot_grades[timeslot]])})"
+                            info(
+                                f"  - Creating new subject '{new_name}' {timeslot_grades[timeslot]}"
+                            )
+                            new_subject = Subject(name=new_name, timeslots=timeslot)
+                            self.subjects[new_subject.name] = new_subject
+                            for assignment in assignments:
+                                info("   - Assigning to lesson", assignment.key)
+                                assignment.subject = new_subject
+
+                else:
+                    error("- Sets are not disjoints", timeslot_grades)
+            elif (
+                subject.timeslots != list(timeslots)[0]
+                and subject.timeslots is not None
+                and list(timeslots)[0] is not None
+            ):
+                error(f"Conflicting timeslots: {subject.name} -> {timeslots.keys()}")
+                # print(" * ", subject.timeslots)
+                # for timeslot, assignments in timeslots.items():
+                #     print(" - ", timeslot, {c.grade for a in assignments for c in a.classes}, {c.name for a in assignments for c in a.classes})
+            elif (
+                subject.timeslots != list(timeslots)[0]
+                and subject.timeslots is not None
+            ):
+                info(
+                    f"Inheriting timeslots, nothing to do: {subject.name} -> {timeslots.keys()}"
+                )
+                # print(" * ", subject.timeslots)
+                # for timeslot, assignments in timeslots.items():
+                #     print(" - ", timeslot, {c.grade for a in assignments for c in a.classes}, {c.name for a in assignments for c in a.classes})
+            elif subject.timeslots != list(timeslots)[0] and subject.timeslots is None:
+                info(f"Setting timeslots: {subject.name} -> {timeslots.keys()}")
+                subject.timeslots = list(timeslots)[0]
+
+    def _import_subjects(self, worksheet: CalamineSheet) -> Iterable[Subject]:
+        data = self._convert_to_named_list(worksheet)
+        for row in data:
+            yield Subject(
+                name=row["Tantárgy"],
+                timeslots=parse_timeslots(row["Órapreferencia"]),
             )
 
     def _import_classrooms(self, worksheet: CalamineSheet) -> Iterable[Classroom]:
@@ -133,34 +218,59 @@ class ExcelImporter:
         data = self._convert_to_named_list(worksheet)
         assignments: list[Assignment] = []
         for row in data:
+            if row.get("Import"):
+                warning(f"Skip importing assignment '{row['Import']}': '{row}'")
+                continue
+
             try:
-                class_ = self.all_classes[row["Osztály"]]
+                class_names = {
+                    class_name.strip()
+                    for class_name in row["Osztály"].strip().split(",")
+                    if class_name.strip()
+                }
+
+                classes: list[Class] = []
+                for class_name in class_names:
+                    class_ = self.all_classes[class_name]
+                    classes.extend(
+                        [class_] if isinstance(class_, Class) else class_.classes
+                    )
             except KeyError:
                 error(f"Missing class: '{row['Osztály']}' -> {row}")
                 continue
 
-            classes = [class_] if isinstance(class_, Class) else class_.classes
+            group_names = [
+                group_name.strip()
+                for group_name in row["Csoport"].split(",")
+                if group_name.strip()
+            ]
 
-            group_name = (
-                row["Csoport"] if row["Csoport"] not in ("", "Teljes") else None
-            )
-            if group_name:
-                groups = [
-                    Group(name=group_name, class_=other_class)
-                    for other_class in classes
-                ]
-            else:
-                groups = []
+            fact = any(group_name.startswith("fakt") for group_name in group_names)
+
+            groups = []
+            for group_name in group_names:
+                assert isinstance(group_name, str), row
+                assert "/" in group_name, row
+                groups.extend(
+                    [
+                        Group(name=group_name, class_=other_class)
+                        for other_class in classes
+                    ]
+                )
 
             self.groups.update(groups)
 
-            subject = self.subjects.setdefault(
-                row["Tantárgy"],
-                Subject(
-                    name=row["Tantárgy"],
-                    timeslots=parse_timeslots(row["Órapreferencia"]),
-                ),
-            )
+            try:
+                subject = self.subjects[row["Tantárgy"]]
+            except KeyError as e:
+                error(f"Missing subject: '{e}' -> {row}")
+                continue
+
+            if fact:
+                subject = Subject(
+                    name=f"{subject.name} - fakt", timeslots=FACT_TIMESLOTS
+                )
+                self.subjects[subject.name] = subject
 
             try:
                 teachers = (
@@ -181,24 +291,54 @@ class ExcelImporter:
                 error(f"Invalid weekly_count ({e}): '{row['Óraszám']}' -> {row}")
                 continue
 
+            double_count = int(row["Dupla óra"]) if row.get("Dupla óra") else 0
+            active_day_count = int(row["AN óra"]) if row.get("AN óra") else 0
+            room_count = int(row["Terem darab"]) if row.get("Terem darab") else 1
+            term = self._get_term(row.get("Időszak", ""))
+
+            timeslot_data = row["Órapreferencia"]
+            if isinstance(timeslot_data, float):
+                timeslot_data = str(int(timeslot_data))
+            elif isinstance(timeslot_data, int):
+                timeslot_data = str(timeslot_data)
+            elif isinstance(timeslot_data, dt.datetime):
+                timeslot_data = str(timeslot_data)
+            elif isinstance(timeslot_data, dt.date):
+                timeslot_data = str(timeslot_data)
+
             try:
                 assignments.append(
                     Assignment(
-                        grade=class_.grade,
                         subject=subject,
-                        class_=class_ if isinstance(class_, Class) else None,
+                        classes=classes,
                         classroom_type=row["Terem tipus"]
                         if row["Terem tipus"] not in ("",)
                         else None,
                         weekly_count=weekly_count,
+                        timeslots=parse_timeslots(timeslot_data, str(row)),
+                        fact=fact,
                         teachers=teachers,
                         groups=groups,
+                        term=term,
+                        double_count=double_count,
+                        active_day_count=active_day_count,
+                        classroom_count=room_count,
                     )
                 )
             except ValueError as e:
                 error(f"{e} -> {row}")
 
         return assignments
+
+    @staticmethod
+    def _get_term(term) -> Term:
+        match term:
+            case 1:
+                return Term.FIRST
+            case 2:
+                return Term.SECOND
+            case _:
+                return Term.FULL
 
     @staticmethod
     def _convert_to_named_list(worksheet: CalamineSheet) -> list[dict[str, Any]]:
