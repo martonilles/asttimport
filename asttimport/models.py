@@ -5,7 +5,8 @@ from enum import Enum
 from asttimport.utils import clean_id
 
 
-TIMESLOTS = dict[int, dict[int, str]]
+# TIMESLOTS = dict[int, dict[int, str]]
+TIMESLOTS = str
 
 
 class ClassroomType(Enum):
@@ -63,6 +64,9 @@ class Class:
     def id(self):
         return clean_id(f"C_{self.name}")
 
+    def __hash__(self):
+        return hash(self.id)
+
 
 @dataclasses.dataclass
 class MetaClass:
@@ -89,7 +93,6 @@ class Group:
 
     @property
     def base(self):
-        assert isinstance(self.name, str), self
         return self.name.split("/")[0]
 
     @property
@@ -100,32 +103,41 @@ class Group:
         return hash(self.id)
 
 
+class Term(Enum):
+    FULL = "11"
+    FIRST = "10"
+    SECOND = "01"
+
 @dataclasses.dataclass
 class Assignment:
     subject: Subject
     teachers: list[Teacher]
     classroom_type: str | None
-    grade: int
-    class_: Class | None
+    classes: list[Class]
     groups: list[Group]
     weekly_count: int
+    double_count: int = 0
+    active_day_count: int = 0
+    term: Term = dataclasses.field(default=Term.FULL)
+    classroom_count: int = 1
+    _id: uuid.UUID = dataclasses.field(default_factory=uuid.uuid4)
 
     def __post_init__(self):
-        if self.class_ is None and not self.groups:
+        if self.classes is None and not self.groups:
             raise ValueError(
                 f"Assignment must have at least one group when class is not set: {self}"
             )
 
     @property
+    def key(self):
+        key = [
+            self.subject.name,
+            *[c.name for c in self.classes],
+            *[t.name for t in self.teachers],
+            *[g.id for g in self.groups],
+        ]
+        return tuple(key)
+
+    @property
     def id(self):
-        return str(uuid.uuid4())
-        if self.class_ is not None:
-            base = f"A_{int(self.class_.grade)}_{self.class_.name}_{self.subject.name}"
-        else:
-            base = f"A_{int(self.grade)}_TELJES_{self.subject.name}"
-
-        if self.groups:
-            group_names = "-".join({group.name for group in self.groups})
-            return clean_id(f"{base}_{group_names}")
-
-        return clean_id(base)
+        return str(self._id)

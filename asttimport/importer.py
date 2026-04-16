@@ -1,4 +1,5 @@
 from typing import Iterable, Any
+from unittest import case
 
 from python_calamine import CalamineWorkbook, CalamineSheet
 
@@ -9,16 +10,19 @@ from asttimport.models import (
     Assignment,
     Subject,
     Group,
-    MetaClass,
+    MetaClass, Term,
 )
-from asttimport.utils import parse_timeslots, info, error
+from asttimport.utils import parse_timeslots, info, error, warning
 
 
 class ExcelImporter:
     def __init__(self, base_data, assignment_excels_data):
         base_workbook = CalamineWorkbook.from_filelike(base_data)
 
-        # Tantárgy
+        self.subjects = {
+            subject.name: subject
+            for subject in self._import_subjects(base_workbook.get_sheet_by_name("Tantárgy"))
+        }
 
         self.classrooms = {
             classrom.name: classrom
@@ -40,7 +44,6 @@ class ExcelImporter:
         self._import_class(base_workbook.get_sheet_by_name("Osztály"))
 
         self.assignments: list[Assignment] = []
-        self.subjects: dict[str, Subject] = {}
         self.groups: set[Group] = set()
 
         for name, data in assignment_excels_data.items():
@@ -48,6 +51,14 @@ class ExcelImporter:
             info(f"Importing {name}...")
             self.assignments.extend(
                 self._import_assignments(workbook.get_sheet_by_name("Beosztás"))
+            )
+
+    def _import_subjects(self, worksheet: CalamineSheet) -> Iterable[Subject]:
+        data = self._convert_to_named_list(worksheet)
+        for row in data:
+            yield Subject(
+                name=row["Tantárgy"],
+                timeslots=parse_timeslots(row["Órapreferencia"]),
             )
 
     def _import_classrooms(self, worksheet: CalamineSheet) -> Iterable[Classroom]:
@@ -133,34 +144,47 @@ class ExcelImporter:
         data = self._convert_to_named_list(worksheet)
         assignments: list[Assignment] = []
         for row in data:
+            if row.get("Import"):
+                warning(f"Skip importing assignment '{row['Import']}': '{row}'")
+                continue
+
             try:
-                class_ = self.all_classes[row["Osztály"]]
+                class_names = {
+                    class_name.strip()
+                    for class_name in row["Osztály"].strip().split(",")
+                    if class_name.strip()
+                }
+
+                classes: list[Class] = []
+                for class_name in class_names:
+                    class_ = self.all_classes[class_name]
+                    classes.extend([class_] if isinstance(class_, Class) else class_.classes)
             except KeyError:
                 error(f"Missing class: '{row['Osztály']}' -> {row}")
                 continue
 
-            classes = [class_] if isinstance(class_, Class) else class_.classes
+            group_names = [
+                group_name.strip()
+                for group_name in row["Csoport"].split(",")
+                if group_name.strip()
+            ]
 
-            group_name = (
-                row["Csoport"] if row["Csoport"] not in ("", "Teljes") else None
-            )
-            if group_name:
-                groups = [
+            groups = []
+            for group_name in group_names:
+                assert isinstance(group_name, str), row
+                assert "/" in group_name, row
+                groups.extend([
                     Group(name=group_name, class_=other_class)
                     for other_class in classes
-                ]
-            else:
-                groups = []
+                ])
 
             self.groups.update(groups)
 
-            subject = self.subjects.setdefault(
-                row["Tantárgy"],
-                Subject(
-                    name=row["Tantárgy"],
-                    timeslots=parse_timeslots(row["Órapreferencia"]),
-                ),
-            )
+            try:
+                subject = self.subjects[row["Tantárgy"]]
+            except KeyError as e:
+                error(f"Missing subject: '{e}' -> {row}")
+                continue
 
             try:
                 teachers = (
@@ -181,24 +205,42 @@ class ExcelImporter:
                 error(f"Invalid weekly_count ({e}): '{row['Óraszám']}' -> {row}")
                 continue
 
+            double_count = int(row["Dupla óra"]) if row.get("Dupla óra") else 0
+            active_day_count = int(row["AN óra"]) if row.get("AN óra") else 0
+            room_count = int(row["Terem darab"]) if row.get("Terem darab") else 1
+            term = self._get_term(row.get("Időszak", ""))
+
             try:
                 assignments.append(
                     Assignment(
-                        grade=class_.grade,
                         subject=subject,
-                        class_=class_ if isinstance(class_, Class) else None,
+                        classes=classes,
                         classroom_type=row["Terem tipus"]
                         if row["Terem tipus"] not in ("",)
                         else None,
                         weekly_count=weekly_count,
                         teachers=teachers,
                         groups=groups,
+                        term=term,
+                        double_count=double_count,
+                        active_day_count=active_day_count,
+                        classroom_count=room_count,
                     )
                 )
             except ValueError as e:
                 error(f"{e} -> {row}")
 
         return assignments
+
+    @staticmethod
+    def _get_term(term) -> Term:
+        match term:
+            case 1:
+                return Term.FIRST
+            case 2:
+                return Term.SECOND
+            case _:
+                return Term.FULL
 
     @staticmethod
     def _convert_to_named_list(worksheet: CalamineSheet) -> list[dict[str, Any]]:
