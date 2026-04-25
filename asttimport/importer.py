@@ -70,31 +70,46 @@ class ExcelImporter:
         for subject, timeslots in subject_timeslots_assignments.items():
             if len(timeslots) > 1:
                 info(f"Multiple timeslots: {subject.name} -> {timeslots.keys()}")
-                # print(" * ", subject.timeslots)
-                # for timeslot, assignments in timeslots.items():
-                #     print(" - ", timeslot, {c.grade for a in assignments for c in a.classes}, {c.name for a in assignments for c in a.classes})
 
                 timeslot_grades = {
                     timeslot: {c.grade for a in assignments for c in a.classes}
                     for timeslot, assignments in timeslots.items()
                 }
 
-                are_disjoints = sum(map(len, timeslot_grades.values())) == len(
+                timeslot_classes = {
+                    timeslot: {c.name for a in assignments for c in a.classes}
+                    for timeslot, assignments in timeslots.items()
+                }
+
+                grades_are_disjoints = sum(map(len, timeslot_grades.values())) == len(
                     set().union(*timeslot_grades.values())
                 )
+                classes_are_disjoints = sum(map(len, timeslot_classes.values())) == len(
+                    set().union(*timeslot_classes.values())
+                )
 
-                if are_disjoints:
-                    # NEED TO TEST FOR CLASS
+                timeslot_mapping = None
+                if all(not classes for classes in timeslot_classes.values()):
+                    timeslot_mapping = {
+                        timeslot: {idx}
+                        for idx, timeslot in enumerate(timeslots.keys())
+                    }
+                elif grades_are_disjoints:
+                    timeslot_mapping = timeslot_grades
+                elif classes_are_disjoints:
+                    timeslot_mapping = timeslot_classes
+
+                if timeslot_mapping is not None:
                     info("- Mutating subjects")
                     for timeslot, assignments in timeslots.items():
                         if timeslot == subject.timeslots:
                             info(
-                                f"  - Keeping timeslot as same as subject {timeslot} {timeslot_grades[timeslot]}"
+                                f"  - Keeping timeslot as same as subject {timeslot} {timeslot_mapping[timeslot]}"
                             )
                         else:
-                            new_name = f"{subject.name} ({','.join([str(grade) for grade in timeslot_grades[timeslot]])})"
+                            new_name = f"{subject.name} ({','.join([str(key) for key in timeslot_mapping[timeslot]])})"
                             info(
-                                f"  - Creating new subject '{new_name}' {timeslot_grades[timeslot]}"
+                                f"  - Creating new subject '{new_name}' {timeslot_mapping[timeslot]}"
                             )
                             new_subject = Subject(name=new_name, timeslots=timeslot)
                             self.subjects[new_subject.name] = new_subject
@@ -103,7 +118,7 @@ class ExcelImporter:
                                 assignment.subject = new_subject
 
                 else:
-                    error("- Sets are not disjoints", timeslot_grades)
+                    error("- Sets are not disjoints", timeslot_grades, timeslot_classes)
             elif (
                 subject.timeslots != list(timeslots)[0]
                 and subject.timeslots is not None

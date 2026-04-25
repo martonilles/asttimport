@@ -2,6 +2,7 @@ import csv
 import os
 import pickle
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 from asttimport.downloader import get_timetable_excel, authenticate
@@ -17,7 +18,7 @@ ASSIGNMENT_EXCEL_IDS: dict[str, str] = {
     "angol": "1dcn3fsdvLSAlg42w0b9j5v_Oy53ldU7vngQdJ0mLIBM",
     "digi": "1j92m42sp8y99HWoMSjyb8zPeSXuuMTgSrNSJH_nRMt4",
     "egyeb": "1PZRtKAaYCQapgyvoeUsw6Fp1E9ImtdeUG6Us018seLk",
-    # "elemi": "1EeyT3egM6kRdgrI-0SrypT2n5VcaQKWZ-3QsycOcPGw",
+    "elemi": "1EeyT3egM6kRdgrI-0SrypT2n5VcaQKWZ-3QsycOcPGw",
     "english": "1YivoXspWgrR0OiZuPmS7YeFZik2Mr3BE7o4Y-dx1Msk",
     "gazdasagi": "1ybs9EJ0ALiJHqtQpbZWtMJ-A-1R7ZnSqsoH7LBVhF-Y",
     "heber": "1yy2Pduwz4dmaDTp7Ya_cPGC1kTHOMz5jYP7lr-RVhp0",
@@ -121,10 +122,10 @@ def main():
                     ]
                 )
 
-    # groups_by_class = defaultdict(set)
-    # for group in importer.groups:
-    #     groups_by_class[group.class_].add(group)
-    #
+    groups_by_class = defaultdict(set)
+    for group in importer.groups:
+        groups_by_class[group.class_].add(group)
+
     # for class_, groups in sorted(groups_by_class.items(), key=lambda x: (x[0].grade, x[0].name)):
     #     group_bases = defaultdict(set)
     #     for group in groups:
@@ -133,8 +134,8 @@ def main():
     #     print(f" - Bases {len(group_bases)}:", ", ".join(sorted(group_bases.keys())))
     #     for base, groups in sorted(group_bases.items(), key=lambda x: x[0]):
     #         print(f"  - {base}: {len(groups)}:", ", ".join(sorted(groups)))
-    #
-    #
+
+
     assignments = {}
     for assignment in importer.assignments:
         if assignment.key in assignments:

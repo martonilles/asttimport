@@ -286,7 +286,7 @@ class Exporter:
         lessons = []
         for assignment in self.assignments:
             term_divider = 1 if assignment.term is Term.FULL else 2
-            normal_day_def = normal_day_mapping.get(assignment.classes[0].grade, "X")
+            normal_day_def = normal_day_mapping.get(assignment.classes[0].grade, "X") if assignment.classes else "X"
 
             if assignment.double_count or assignment.active_day_count:
                 normal_count = (
