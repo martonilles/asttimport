@@ -68,7 +68,7 @@ class Class:
     name: str
     grade: int
     teachers: list[Teacher]
-    classroom: Classroom | None
+    classrooms: list[Classroom]
     timeslots: TIMESLOTS
 
     @property
@@ -139,7 +139,7 @@ class Term(Enum):
 class Assignment:
     subject: Subject
     teachers: list[Teacher]
-    classroom_type: str | None
+    classrooms: list[Classroom]
     classes: list[Class]
     groups: list[Group]
     weekly_count: int

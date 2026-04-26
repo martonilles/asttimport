@@ -107,7 +107,7 @@ class ExcelImporter:
                                 f"  - Keeping timeslot as same as subject {timeslot} {timeslot_mapping[timeslot]}"
                             )
                         else:
-                            new_name = f"{subject.name} ({','.join([str(key) for key in timeslot_mapping[timeslot]])})"
+                            new_name = f"{subject.name} ({','.join(sorted([str(key) for key in timeslot_mapping[timeslot]]))})"
                             info(
                                 f"  - Creating new subject '{new_name}' {timeslot_mapping[timeslot]}"
                             )
@@ -172,8 +172,11 @@ class ExcelImporter:
         data = self._convert_to_named_list(worksheet)
         for row in data:
             try:
-                # classroom = self.classrooms[row["Terem"]] if row["Terem"] else None
-                classroom = None
+                classrooms = [
+                    self.classrooms[classroom.strip()]
+                    for classroom in row["Terem"].strip().split(",")
+                    if classroom.strip()
+                ]
             except KeyError:
                 error(f"Missing classroom: '{row['Terem']}' -> {row['Osztály Név']}")
                 continue
@@ -210,7 +213,7 @@ class ExcelImporter:
                     ref_name=ref_name,
                     grade=grade,
                     name=name,
-                    classroom=classroom,
+                    classrooms=classrooms,
                     teachers=teachers,
                     timeslots=parse_timeslots(row["Órapreferencia"]),
                 )
@@ -306,6 +309,23 @@ class ExcelImporter:
                 error(f"Invalid weekly_count ({e}): '{row['Óraszám']}' -> {row}")
                 continue
 
+            classroom_type = row["Terem tipus"].strip()
+            if classroom_type:
+                classrooms = [
+                    classroom
+                    for classroom in self.classrooms.values()
+                    if classroom.type == classroom_type
+                ]
+                if not classrooms:
+                    error(f"Invalid classroom type: '{classroom_type}' -> {row}")
+            else:
+                classrooms = [
+                    classroom
+                    for class_ in classes
+                    for classroom in class_.classrooms
+                ]
+            classrooms = []
+
             double_count = int(row["Dupla óra"]) if row.get("Dupla óra") else 0
             active_day_count = int(row["AN óra"]) if row.get("AN óra") else 0
             room_count = int(row["Terem darab"]) if row.get("Terem darab") else 1
@@ -326,9 +346,7 @@ class ExcelImporter:
                     Assignment(
                         subject=subject,
                         classes=classes,
-                        classroom_type=row["Terem tipus"]
-                        if row["Terem tipus"] not in ("",)
-                        else None,
+                        classrooms=classrooms,
                         weekly_count=weekly_count,
                         timeslots=parse_timeslots(timeslot_data, str(row)),
                         fact=fact,

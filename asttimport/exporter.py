@@ -42,11 +42,12 @@ class ClassRoom(BaseXmlModel, tag="classroom"):
     id: str = attr("id")
     name: str = attr("name")
     short: str = attr("short")
+    timeoff: str = attr("timeoff")
 
 
 class ClassRooms(BaseXmlModel, tag="classrooms"):
     options: str = attr("options", default="")
-    columns: str = attr("columns", default="id,name,short")
+    columns: str = attr("columns", default="id,name,short,timeoff")
     classrooms: list[ClassRoom]
 
 
@@ -243,7 +244,7 @@ class Exporter:
         ]
 
         classrooms = [
-            ClassRoom(id=classroom.id, name=classroom.name, short=classroom.name)
+            ClassRoom(id=classroom.id, name=classroom.name, short=classroom.name, timeoff=classroom.timeoff)
             for classroom in self.classrooms.values()
         ]
 
@@ -253,8 +254,8 @@ class Exporter:
                 name=f"{int(class_.grade)}. {class_.name}",
                 short=class_.name,
                 grade=class_.grade,
-                classroomids=class_.classroom.id
-                if class_.classroom is not None
+                classroomids=",".join([classroom.id for classroom in class_.classrooms])
+                if class_.classrooms is not None
                 else "",
             )
             for class_ in self.classes.values()
@@ -312,7 +313,7 @@ class Exporter:
                             teacherids=",".join(
                                 [teacher.id for teacher in assignment.teachers]
                             ),
-                            classroomids="",
+                            classroomids=",".join([classroom.id for classroom in assignment.classrooms]),
                             durationperiods=1,
                             periodsperweek=normal_count / term_divider,
                             termsdefid=terms_mapping[assignment.term].id,
@@ -337,7 +338,7 @@ class Exporter:
                             teacherids=",".join(
                                 [teacher.id for teacher in assignment.teachers]
                             ),
-                            classroomids="",
+                            classroomids=",".join([classroom.id for classroom in assignment.classrooms]),
                             durationperiods=assignment.active_day_count,
                             periodsperweek=assignment.active_day_count / term_divider,
                             termsdefid=terms_mapping[assignment.term].id,
@@ -362,7 +363,7 @@ class Exporter:
                             teacherids=",".join(
                                 [teacher.id for teacher in assignment.teachers]
                             ),
-                            classroomids="",
+                            classroomids=",".join([classroom.id for classroom in assignment.classrooms]),
                             durationperiods=2,
                             periodsperweek=assignment.double_count * 2 / term_divider,
                             termsdefid=terms_mapping[assignment.term].id,
@@ -381,7 +382,7 @@ class Exporter:
                         teacherids=",".join(
                             [teacher.id for teacher in assignment.teachers]
                         ),
-                        classroomids="",
+                        classroomids=",".join([classroom.id for classroom in assignment.classrooms]),
                         durationperiods=1,
                         periodsperweek=assignment.weekly_count / term_divider,
                         termsdefid=terms_mapping[assignment.term].id,
