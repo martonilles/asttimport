@@ -1,3 +1,4 @@
+import argparse
 import csv
 import os
 import pickle
@@ -8,7 +9,7 @@ from pathlib import Path
 from asttimport.downloader import get_timetable_excel, authenticate
 from asttimport.exporter import Exporter
 from asttimport.importer import ExcelImporter
-from asttimport.utils import info, error
+from asttimport.utils import info, error, set_loglevel
 
 CACHE_DIR = Path(".cache")
 
@@ -62,6 +63,14 @@ def save_cache(name: str, data):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-q', '--quiet', action='store_true')
+    parser.add_argument('-g', '--groups', action='store_true')
+    parser.add_argument('--type', action='append', dest='types')
+    args = parser.parse_args(sys.argv[1:])
+
+    set_loglevel(print_info=not args.quiet)
+
     service = authenticate()
 
     base_excel_data = load_cache("base")
@@ -71,7 +80,7 @@ def main():
 
     assignment_excels_data = {}
     for name, excel_id in ASSIGNMENT_EXCEL_IDS.items():
-        if sys.argv[1:] and name not in sys.argv[1:]:
+        if args.types and name not in args.types:
             continue
         excel_data = load_cache(name)
         if excel_data is None:
@@ -81,10 +90,6 @@ def main():
 
     importer = ExcelImporter(base_excel_data, assignment_excels_data)
 
-    print(
-        f"{len(importer.teachers)=} {len(importer.classes)=} {len(importer.classrooms)=} {len(importer.assignments)=}"
-    )
-
     exporter = Exporter(importer)
     exporter.write(Path("orarend.xml"))
 
@@ -93,6 +98,7 @@ def main():
         c.writerow(
             [
                 "Tanár",
+                "Munkacsoport",
                 "Tantárgy",
                 "Évfolyam",
                 "Osztály",
@@ -112,7 +118,8 @@ def main():
                 c.writerow(
                     [
                         teacher.name,
-                        assignment.subject.name,
+                        assignment.subject.workgroup,
+                        assignment.subject.base_name,
                         ",".join(grades),
                         class_names,
                         assignment.weekly_count,
@@ -126,14 +133,15 @@ def main():
     for group in importer.groups:
         groups_by_class[group.class_].add(group)
 
-    # for class_, groups in sorted(groups_by_class.items(), key=lambda x: (x[0].grade, x[0].name)):
-    #     group_bases = defaultdict(set)
-    #     for group in groups:
-    #         group_bases[group.base].add(group.name)
-    #     print(class_.grade, class_.name)
-    #     print(f" - Bases {len(group_bases)}:", ", ".join(sorted(group_bases.keys())))
-    #     for base, groups in sorted(group_bases.items(), key=lambda x: x[0]):
-    #         print(f"  - {base}: {len(groups)}:", ", ".join(sorted(groups)))
+    if args.groups:
+        for class_, groups in sorted(groups_by_class.items(), key=lambda x: (x[0].grade, x[0].name)):
+            group_bases = defaultdict(set)
+            for group in groups:
+                group_bases[group.base].add(group.name)
+            print(class_.grade, class_.name)
+            print(f" - Bases {len(group_bases)}:", ", ".join(sorted(group_bases.keys())))
+            for base, groups in sorted(group_bases.items(), key=lambda x: x[0]):
+                print(f"  - {base}: {len(groups)}:", ", ".join(sorted(groups)))
 
 
     assignments = {}

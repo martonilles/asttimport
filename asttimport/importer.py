@@ -57,7 +57,9 @@ class ExcelImporter:
                 self._import_assignments(workbook.get_sheet_by_name("Beosztás"))
             )
 
+        subject_count = len(self.subjects)
         self._remap_assignment_subjects()
+        info(f"Imported {len(self.teachers)=} {subject_count=} {len(self.subjects)=} {len(self.groups)=} {len(self.assignments)=} {len(self.classrooms)=} {len(self.classes)=}")
 
     def _remap_assignment_subjects(self):
         subject_timeslots_assignments = defaultdict(lambda: defaultdict(list))
@@ -111,14 +113,16 @@ class ExcelImporter:
                             info(
                                 f"  - Creating new subject '{new_name}' {timeslot_mapping[timeslot]}"
                             )
-                            new_subject = Subject(name=new_name, timeslots=timeslot)
+                            new_subject = Subject(name=new_name, timeslots=timeslot, base_name=subject.base_name,
+                                                  official_name=subject.official_name, workgroup=subject.workgroup,
+                                                  comment=subject.comment)
                             self.subjects[new_subject.name] = new_subject
                             for assignment in assignments:
                                 info("   - Assigning to lesson", assignment.key)
                                 assignment.subject = new_subject
 
                 else:
-                    error("- Sets are not disjoints", timeslot_grades, timeslot_classes)
+                    error(f"- Sets are not disjoints {subject.name} -> {timeslots.keys()}", timeslot_grades, timeslot_classes)
             elif (
                 subject.timeslots != list(timeslots)[0]
                 and subject.timeslots is not None
@@ -147,6 +151,10 @@ class ExcelImporter:
         for row in data:
             yield Subject(
                 name=row["Tantárgy"],
+                base_name=row["Tantárgy"],
+                comment=row["Megjegyzés"],
+                official_name=row["Kréta név"] or row["Tantárgy"],
+                workgroup=row["Munkacsoport"] if row["Munkacsoport"] else None,
                 timeslots=parse_timeslots(row["Órapreferencia"]),
             )
 
@@ -286,7 +294,9 @@ class ExcelImporter:
 
             if fact:
                 subject = Subject(
-                    name=f"{subject.name} - fakt", timeslots=FACT_TIMESLOTS
+                    name=f"{subject.name} - fakt", timeslots=FACT_TIMESLOTS,
+                    base_name=subject.name, official_name=subject.official_name,
+                    workgroup=subject.workgroup, comment=subject.comment,
                 )
                 self.subjects[subject.name] = subject
 
@@ -348,6 +358,7 @@ class ExcelImporter:
                         classes=classes,
                         classrooms=classrooms,
                         weekly_count=weekly_count,
+                        comment=row["Megjegyzés"],
                         timeslots=parse_timeslots(timeslot_data, str(row)),
                         fact=fact,
                         teachers=teachers,

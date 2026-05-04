@@ -22,8 +22,16 @@ PREF_MAP = {
 NUM_PERIODS = 11
 
 
+PRINT_INFO = True
+
+def set_loglevel(print_info: bool = True):
+    global PRINT_INFO
+    PRINT_INFO = print_info
+
 def info(*args):
-    print("INF", *args)
+    global PRINT_INFO
+    if PRINT_INFO:
+        print("INF", *args)
 
 
 def warning(*args):
@@ -79,8 +87,14 @@ def parse_timeslots(data: str, debug: str = "") -> str | None:
                 if slot[1] in ("+", "-", "?"):
                     update(day=day, period=None, value=PREF_MAP.get(slot[1], "1"))
                 else:
+                    if len(slot) > 2 and slot[2].isdigit():
+                        period = int(slot[1:3])
+                        value = slot[3:]
+                    else:
+                        period = int(slot[1])
+                        value = slot[2:]
                     update(
-                        day=day, period=int(slot[1]), value=PREF_MAP.get(slot[2:], "1")
+                        day=day, period=period, value=PREF_MAP.get(value, "1")
                     )
             elif slot[0].isnumeric():
                 update(day=None, period=int(slot[0]), value=PREF_MAP.get(slot[1:], "1"))
@@ -88,7 +102,7 @@ def parse_timeslots(data: str, debug: str = "") -> str | None:
         error(f"Invalid timeslot '{data}' {e} {debug}")
 
     if prefs.intersection({"1", "0"}) == {"1", "0"}:
-        error(f"Invalid timeslot '{data}'")
+        error(f"Invalid timeslot default '{data}'")
 
     default = "0" if "1" in prefs else "1"
 

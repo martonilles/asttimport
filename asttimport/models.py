@@ -96,7 +96,11 @@ class MetaClass:
 @dataclasses.dataclass
 class Subject:
     name: str
+    base_name: str
+    official_name: str
+    comment: str
     timeslots: TIMESLOTS
+    workgroup: str | None = None
 
     @property
     def timeoff(self):
@@ -144,6 +148,7 @@ class Assignment:
     groups: list[Group]
     weekly_count: int
     timeslots: TIMESLOTS
+    comment: str
     fact: bool = False
     double_count: int = 0
     active_day_count: int = 0
@@ -161,6 +166,7 @@ class Assignment:
     def key(self):
         key = [
             self.subject.name,
+            self.weekly_count,
             *[c.name for c in self.classes],
             *[t.name for t in self.teachers],
             *[g.id for g in self.groups],

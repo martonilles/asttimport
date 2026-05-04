@@ -3,8 +3,8 @@ from pathlib import Path
 from pydantic_xml import BaseXmlModel, attr
 
 from asttimport.importer import ExcelImporter
-from asttimport.models import Term
-from asttimport.utils import NUM_PERIODS
+from asttimport.models import Term, Assignment
+from asttimport.utils import NUM_PERIODS, info, warning
 
 
 class Teacher(BaseXmlModel, tag="teacher"):
@@ -16,7 +16,7 @@ class Teacher(BaseXmlModel, tag="teacher"):
 
 
 class Teachers(BaseXmlModel, tag="teachers"):
-    options: str = attr("options", default="")
+    options: str = attr("options", default="primarydb")
     columns: str = attr("columns", default="id,name,short,email,timeoff")
     teachers: list[Teacher]
 
@@ -26,6 +26,8 @@ class Class(BaseXmlModel, tag="class"):
     name: str = attr("name")
     short: str = attr("short")
     grade: int = attr("grade")
+    timeoff: str = attr("timeoff")
+
     classroomids: str = attr(
         "classroomids",
         default="",
@@ -33,8 +35,8 @@ class Class(BaseXmlModel, tag="class"):
 
 
 class Classes(BaseXmlModel, tag="classes"):
-    options: str = attr("options", default="")
-    columns: str = attr("columns", default="id,name,short,grade,classroomids")
+    options: str = attr("options", default="primarydb")
+    columns: str = attr("columns", default="id,name,short,grade,timeoff,classroomids")
     classes: list[Class]
 
 
@@ -46,7 +48,7 @@ class ClassRoom(BaseXmlModel, tag="classroom"):
 
 
 class ClassRooms(BaseXmlModel, tag="classrooms"):
-    options: str = attr("options", default="")
+    options: str = attr("options", default="primarydb")
     columns: str = attr("columns", default="id,name,short,timeoff")
     classrooms: list[ClassRoom]
 
@@ -56,10 +58,12 @@ class Subject(BaseXmlModel, tag="subject", frozen=True):
     name: str = attr("name")
     short: str = attr("short")
     timeoff: str = attr("timeoff")
+    comment: str = attr("customfield1")
+    official_name: str = attr("customfield2")
 
 
 class Subjects(BaseXmlModel, tag="subjects"):
-    options: str = attr("options", default="")
+    options: str = attr("options", default="primarydb,customfield1:Comment,customfield2:Kreta")
     columns: str = attr("columns", default="id,name,short,timeoff")
     subjects: list[Subject]
 
@@ -89,10 +93,11 @@ class Lesson(BaseXmlModel, tag="lesson", frozen=True):
     periodsperweek: float = attr("periodsperweek")
     termsdefid: str = attr("termsdefid")
     daysdefid: str = attr("daysdefid")
+    comment: str = attr("customfield1")
 
 
 class Lessons(BaseXmlModel, tag="lessons"):
-    options: str = attr("options", default="primarydb")
+    options: str = attr("options", default="primarydb,customfield1:Comment")
     columns: str = attr(
         "columns",
         default="id,subjectid,groupids,classids,teacherids,classroomids,durationperiods,periodsperweek,termsdefid,daysdefid",
@@ -241,6 +246,7 @@ class Exporter:
                 timeoff=teacher.timeoff,
             )
             for teacher in self.teachers.values()
+            if any(teacher in assignment.teachers for assignment in self.assignments)
         ]
 
         classrooms = [
@@ -254,6 +260,7 @@ class Exporter:
                 name=f"{int(class_.grade)}. {class_.name}",
                 short=class_.name,
                 grade=class_.grade,
+                timeoff=class_.timeoff,
                 classroomids=",".join([classroom.id for classroom in class_.classrooms])
                 if class_.classrooms is not None
                 else "",
@@ -265,10 +272,13 @@ class Exporter:
             Subject(
                 id=subject.id,
                 name=subject.name,
-                short=subject.name,
+                short=subject.base_name,
                 timeoff=subject.timeoff,
+                official_name=subject.official_name,
+                comment=subject.comment,
             )
             for subject in self.subjects
+            if any(subject == assignment.subject for assignment in self.assignments)
         ]
 
         groups = [
@@ -295,6 +305,16 @@ class Exporter:
                     - (assignment.double_count * 2)
                     - assignment.active_day_count
                 )
+
+                if any(group.name.startswith("faktX/") for group in assignment.groups):
+                    warning(f"Skipping special fact {[c.name for c in assignment.classes]} {assignment.subject.name} {normal_count=} {assignment.double_count=}")
+                    continue
+
+                elif assignment.fact and (normal_count or assignment.double_count > 1):
+                    warning(f"Skipping extra fact {[c.name for c in assignment.classes]} {assignment.subject.name} {normal_count=} {assignment.double_count=}")
+                    normal_count = 0
+                    assignment.double_count = 1
+
                 if normal_count:
                     lessons.append(
                         Lesson(
@@ -318,6 +338,7 @@ class Exporter:
                             periodsperweek=normal_count / term_divider,
                             termsdefid=terms_mapping[assignment.term].id,
                             daysdefid=normal_day_def,
+                            comment=assignment.comment,
                         )
                     )
                 if assignment.active_day_count and False:
@@ -343,6 +364,8 @@ class Exporter:
                             periodsperweek=assignment.active_day_count / term_divider,
                             termsdefid=terms_mapping[assignment.term].id,
                             daysdefid=active_day_mapping[assignment.classes[0].grade],
+                            comment=assignment.comment,
+
                         )
                     )
                 if assignment.double_count:
@@ -368,6 +391,7 @@ class Exporter:
                             periodsperweek=assignment.double_count * 2 / term_divider,
                             termsdefid=terms_mapping[assignment.term].id,
                             daysdefid=normal_day_def,
+                            comment=assignment.comment,
                         )
                     )
             else:
@@ -387,6 +411,7 @@ class Exporter:
                         periodsperweek=assignment.weekly_count / term_divider,
                         termsdefid=terms_mapping[assignment.term].id,
                         daysdefid=normal_day_def,
+                        comment=assignment.comment,
                     )
                 )
 
@@ -401,6 +426,8 @@ class Exporter:
             groups=Groups(groups=groups),
             lessons=Lessons(lessons=lessons),
         )
+
+        info(f"Exported {len(teachers)=} {len(subjects)=} {len(groups)=} {len(lessons)=} {len(classrooms)=} {len(classes)=}")
 
         return timetable
 
