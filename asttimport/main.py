@@ -129,6 +129,32 @@ def main():
                     ]
                 )
 
+    assignments_by_group = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for assignment in importer.assignments:
+        for class_ in assignment.classes:
+            for group in assignment.groups:
+                if group.class_ == class_:
+                    assignments_by_group[class_][group.base][group.name].append(assignment)
+            if not assignment.groups:
+                assignments_by_group[class_][None][None].append(assignment)
+
+    if args.groups:
+        for class_, base_assignments in sorted(assignments_by_group.items(), key=lambda x: x[0].grade):
+            print(class_.grade, class_.name)
+            min_hours = max_hours = 0
+            for base, group_assignments in base_assignments.items():
+                weekly_counts = {
+                    group_name: sum(a.weekly_count for a in assignments)
+                    for group_name, assignments in group_assignments.items()
+                }
+                min_weekly_count = min(weekly_counts.values())
+                max_weekly_count = max(weekly_counts.values())
+                # print(" -", base, min_weekly_count, max_weekly_count, weekly_counts)
+                min_hours += min_weekly_count
+                max_hours += max_weekly_count
+
+            print(" =", min_hours, max_hours)
+
     groups_by_class = defaultdict(set)
     for group in importer.groups:
         groups_by_class[group.class_].add(group)

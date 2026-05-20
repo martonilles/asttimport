@@ -50,6 +50,7 @@ class Classroom:
     name: str
     type: str
     timeslots: TIMESLOTS
+    affinity: str
 
     @property
     def timeoff(self):

@@ -161,10 +161,14 @@ class ExcelImporter:
     def _import_classrooms(self, worksheet: CalamineSheet) -> Iterable[Classroom]:
         data = self._convert_to_named_list(worksheet)
         for row in data:
+            if row["Speciális"].strip() != "":
+                warning(f"Skipping importing special classroom {row}")
+                continue
             yield Classroom(
                 name=row["Terem"],
                 type=row["Terem tipus"],
                 timeslots=parse_timeslots(row["Órapreferencia"]),
+                affinity=row["Tagozat"],
             )
 
     def _import_teachers(self, worksheet: CalamineSheet) -> Iterable[Teacher]:
@@ -320,21 +324,26 @@ class ExcelImporter:
                 continue
 
             classroom_type = row["Terem tipus"].strip()
-            if classroom_type:
-                classrooms = [
-                    classroom
-                    for classroom in self.classrooms.values()
-                    if classroom.type == classroom_type
-                ]
-                if not classrooms:
-                    error(f"Invalid classroom type: '{classroom_type}' -> {row}")
-            else:
+            if not classroom_type:
+                classroom_type = "Osztályterem"
+
+            if not classes:
+                classrooms = []
+            elif not groups and classroom_type == "Osztályterem":
                 classrooms = [
                     classroom
                     for class_ in classes
                     for classroom in class_.classrooms
                 ]
-            classrooms = []
+            else:
+                grade = max(class_.grade for class_ in classes)
+                classroom_types = {classroom_type}
+                if classroom_type == "Kisterem":
+                    classroom_types.add("Osztályterem")
+
+                classrooms = self._get_classrooms(grade, classroom_types)
+                if not classrooms:
+                    warning(f"No classrooms found for lesson '{row}'")
 
             double_count = int(row["Dupla óra"]) if row.get("Dupla óra") else 0
             active_day_count = int(row["AN óra"]) if row.get("AN óra") else 0
@@ -373,6 +382,16 @@ class ExcelImporter:
                 error(f"{e} -> {row}")
 
         return assignments
+
+    def _get_classrooms(self, grade: int, classroom_types: set[str]):
+        return [
+            classroom
+            for classroom in self.classrooms.values()
+            if classroom.type in classroom_types and
+               ((grade in (1,2,3,4) and classroom.affinity in {"Elemi", "Spec"}) or
+               (grade in (5,6,7,8,99) and classroom.affinity in {"Közép", "Spec"}) or
+               (grade in (9, 10, 11, 12) and classroom.affinity in {"Közép", "Gimi", "Spec"}))
+        ]
 
     @staticmethod
     def _get_term(term) -> Term:

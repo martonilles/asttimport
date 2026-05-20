@@ -97,12 +97,18 @@ def parse_timeslots(data: str, debug: str = "") -> str | None:
                         day=day, period=period, value=PREF_MAP.get(value, "1")
                     )
             elif slot[0].isnumeric():
-                update(day=None, period=int(slot[0]), value=PREF_MAP.get(slot[1:], "1"))
+                if len(slot) > 1 and slot[1].isdigit():
+                    period = int(slot[:2])
+                    value = slot[2:]
+                else:
+                    period = int(slot[0])
+                    value = slot[1:]
+                update(day=None, period=int(period), value=PREF_MAP.get(value, "1"))
     except Exception as e:
         error(f"Invalid timeslot '{data}' {e} {debug}")
 
     if prefs.intersection({"1", "0"}) == {"1", "0"}:
-        error(f"Invalid timeslot default '{data}'")
+        error(f"Invalid timeslot default '{data}' {prefs=}")
 
     default = "0" if "1" in prefs else "1"
 

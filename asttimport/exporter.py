@@ -299,12 +299,18 @@ class Exporter:
             term_divider = 1 if assignment.term is Term.FULL else 2
             normal_day_def = normal_day_mapping.get(assignment.classes[0].grade, "X") if assignment.classes else "X"
 
+            if assignment.classroom_count > 1:
+                warning(f"Multi-classroom assignment {assignment.classroom_count} {assignment.subject.name}")
+
             if assignment.double_count or assignment.active_day_count:
                 normal_count = (
                     assignment.weekly_count
                     - (assignment.double_count * 2)
                     - assignment.active_day_count
                 )
+
+                if normal_count > 5:
+                    warning(f"High number of normal hour count {normal_count=} {assignment=}")
 
                 if any(group.name.startswith("faktX/") for group in assignment.groups):
                     warning(f"Skipping special fact {[c.name for c in assignment.classes]} {assignment.subject.name} {normal_count=} {assignment.double_count=}")
@@ -395,6 +401,9 @@ class Exporter:
                         )
                     )
             else:
+                if assignment.weekly_count > 5:
+                    warning(f"High number of normal hour count {assignment.weekly_count=} {assignment=}")
+
                 lessons.append(
                     Lesson(
                         id=assignment.id,
@@ -435,7 +444,7 @@ class Exporter:
         timetable = self.build()
         xml = timetable.to_xml(
             pretty_print=True,
-            encoding="UTF-8",
+            encoding="windows-1252",
             standalone=True,
             xml_declaration=True,
         )
