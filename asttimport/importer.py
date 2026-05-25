@@ -83,11 +83,19 @@ class ExcelImporter:
                     for timeslot, assignments in timeslots.items()
                 }
 
+                timeslot_classes_teachers = {
+                    timeslot: {f"{c.name}-{t.name}" for a in assignments for c in a.classes for t in a.teachers}
+                    for timeslot, assignments in timeslots.items()
+                }
+
                 grades_are_disjoints = sum(map(len, timeslot_grades.values())) == len(
                     set().union(*timeslot_grades.values())
                 )
                 classes_are_disjoints = sum(map(len, timeslot_classes.values())) == len(
                     set().union(*timeslot_classes.values())
+                )
+                classes_teachers_are_disjoints = sum(map(len, timeslot_classes_teachers.values())) == len(
+                    set().union(*timeslot_classes_teachers.values())
                 )
 
                 timeslot_mapping = None
@@ -100,6 +108,8 @@ class ExcelImporter:
                     timeslot_mapping = timeslot_grades
                 elif classes_are_disjoints:
                     timeslot_mapping = timeslot_classes
+                elif classes_teachers_are_disjoints:
+                    timeslot_mapping = timeslot_classes_teachers
 
                 if timeslot_mapping is not None:
                     info("- Mutating subjects")
@@ -340,6 +350,8 @@ class ExcelImporter:
                 classroom_types = {classroom_type}
                 if classroom_type == "Kisterem":
                     classroom_types.add("Osztályterem")
+                if classroom_type == "Tornaterem":
+                    classroom_types.add("Aula")
 
                 classrooms = self._get_classrooms(grade, classroom_types)
                 if not classrooms:

@@ -444,7 +444,7 @@ class Exporter:
         timetable = self.build()
         xml = timetable.to_xml(
             pretty_print=True,
-            encoding="windows-1252",
+            encoding="utf-8",
             standalone=True,
             xml_declaration=True,
         )

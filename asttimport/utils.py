@@ -57,7 +57,7 @@ def get_timeoff(data: dict[int, dict[int, str]], default) -> str:
 
 
 def parse_timeslots(data: str, debug: str = "") -> str | None:
-    if not data:
+    if not data or data[0] == "X":
         return None
 
     timeslots = defaultdict(lambda: defaultdict(lambda: "X"))
