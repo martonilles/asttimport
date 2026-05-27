@@ -51,6 +51,7 @@ class Classroom:
     type: str
     timeslots: TIMESLOTS
     affinity: str
+    capacity: int
 
     @property
     def timeoff(self):
@@ -71,6 +72,7 @@ class Class:
     teachers: list[Teacher]
     classrooms: list[Classroom]
     timeslots: TIMESLOTS
+    capacity: int
 
     @property
     def timeoff(self):
@@ -121,6 +123,7 @@ class Subject:
 class Group:
     name: str
     class_: Class
+    capacity: int
 
     @property
     def base(self):

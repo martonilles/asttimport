@@ -45,11 +45,11 @@ class ClassRoom(BaseXmlModel, tag="classroom"):
     name: str = attr("name")
     short: str = attr("short")
     timeoff: str = attr("timeoff")
-
+    capacity: int = attr("capacity")
 
 class ClassRooms(BaseXmlModel, tag="classrooms"):
     options: str = attr("options", default="primarydb")
-    columns: str = attr("columns", default="id,name,short,timeoff")
+    columns: str = attr("columns", default="id,name,short,timeoff,capacity")
     classrooms: list[ClassRoom]
 
 
@@ -74,11 +74,12 @@ class Group(BaseXmlModel, tag="group", frozen=True):
     classid: str = attr("classid")
     entireclass: str = attr("entireclass")
     divisiontag: str = attr("divisiontag")
+    studentcount: int = attr("studentcount")
 
 
 class Groups(BaseXmlModel, tag="groups"):
     options: str = attr("options", default="primarydb")
-    columns: str = attr("columns", default="id,name,classid,entireclass,divisiontag")
+    columns: str = attr("columns", default="id,name,classid,entireclass,divisiontag,studentcount")
     groups: list[Group]
 
 
@@ -250,7 +251,7 @@ class Exporter:
         ]
 
         classrooms = [
-            ClassRoom(id=classroom.id, name=classroom.name, short=classroom.name, timeoff=classroom.timeoff)
+            ClassRoom(id=classroom.id, name=classroom.name, short=classroom.name, timeoff=classroom.timeoff, capacity=classroom.capacity)
             for classroom in self.classrooms.values()
         ]
 
@@ -288,6 +289,7 @@ class Exporter:
                 classid=group.class_.id,
                 divisiontag=group.base,
                 entireclass="0",
+                studentcount=group.capacity,
             )
             for group in sorted(
                 self.groups, key=lambda group: (group.class_.id, group.name)

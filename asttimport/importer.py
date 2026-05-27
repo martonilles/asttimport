@@ -1,3 +1,4 @@
+import math
 from collections import defaultdict
 from typing import Iterable, Any
 import datetime as dt
@@ -59,7 +60,19 @@ class ExcelImporter:
 
         subject_count = len(self.subjects)
         self._remap_assignment_subjects()
+        self._calculate_group_capacity()
         info(f"Imported {len(self.teachers)=} {subject_count=} {len(self.subjects)=} {len(self.groups)=} {len(self.assignments)=} {len(self.classrooms)=} {len(self.classes)=}")
+
+    def _calculate_group_capacity(self):
+        class_groups = defaultdict(lambda: defaultdict(list))
+        for group in self.groups:
+            class_groups[group.class_][group.base].append(group)
+
+        for class_, bases in class_groups.items():
+            for base, groups in bases.items():
+                capacity = math.ceil(class_.capacity / len(groups))
+                for group in groups:
+                    group.capacity = capacity
 
     def _remap_assignment_subjects(self):
         subject_timeslots_assignments = defaultdict(lambda: defaultdict(list))
@@ -179,6 +192,7 @@ class ExcelImporter:
                 type=row["Terem tipus"],
                 timeslots=parse_timeslots(row["Órapreferencia"]),
                 affinity=row["Tagozat"],
+                capacity=int(row["Létszám"]),
             )
 
     def _import_teachers(self, worksheet: CalamineSheet) -> Iterable[Teacher]:
@@ -231,6 +245,8 @@ class ExcelImporter:
                 )
                 self.metaclasses[ref_name] = class_
             else:
+                capacity = int(row["Létszám"])
+
                 class_ = Class(
                     ref_name=ref_name,
                     grade=grade,
@@ -238,6 +254,7 @@ class ExcelImporter:
                     classrooms=classrooms,
                     teachers=teachers,
                     timeslots=parse_timeslots(row["Órapreferencia"]),
+                    capacity=capacity
                 )
                 self.classes[ref_name] = class_
             self.all_classes[ref_name] = class_
@@ -293,7 +310,7 @@ class ExcelImporter:
                 assert "/" in group_name, row
                 groups.extend(
                     [
-                        Group(name=group_name, class_=other_class)
+                        Group(name=group_name, class_=other_class, capacity=0)
                         for other_class in classes
                     ]
                 )
