@@ -19,7 +19,9 @@ from asttimport.utils import parse_timeslots, info, error, warning, FACT_TIMESLO
 
 
 class ExcelImporter:
-    def __init__(self, base_data, assignment_excels_data):
+    def __init__(self, base_data, assignment_excels_data, import_rooms=True):
+        self._import_rooms = import_rooms
+
         base_workbook = CalamineWorkbook.from_filelike(base_data)
 
         self.subjects = {
@@ -354,25 +356,28 @@ class ExcelImporter:
             if not classroom_type:
                 classroom_type = "Osztályterem"
 
-            if not classes:
-                classrooms = []
-            elif not groups and classroom_type == "Osztályterem":
-                classrooms = [
-                    classroom
-                    for class_ in classes
-                    for classroom in class_.classrooms
-                ]
-            else:
-                grade = max(class_.grade for class_ in classes)
-                classroom_types = {classroom_type}
-                if classroom_type == "Kisterem":
-                    classroom_types.add("Osztályterem")
-                if classroom_type == "Tornaterem" and grade > 4:
-                    classroom_types.add("Aula")
+            if self._import_rooms:
+                if not classes:
+                    classrooms = []
+                elif not groups and classroom_type == "Osztályterem":
+                    classrooms = [
+                        classroom
+                        for class_ in classes
+                        for classroom in class_.classrooms
+                    ]
+                else:
+                    grade = max(class_.grade for class_ in classes)
+                    classroom_types = {classroom_type}
+                    if classroom_type == "Kisterem":
+                        classroom_types.add("Osztályterem")
+                    if classroom_type == "Tornaterem" and grade > 4:
+                        classroom_types.add("Aula")
 
-                classrooms = self._get_classrooms(grade, classroom_types)
-                if not classrooms:
-                    warning(f"No classrooms found for lesson '{row}'")
+                    classrooms = self._get_classrooms(grade, classroom_types)
+                    if not classrooms:
+                        warning(f"No classrooms found for lesson '{row}'")
+            else:
+                classrooms = []
 
             double_count = int(row["Dupla óra"]) if row.get("Dupla óra") else 0
             active_day_count = int(row["AN óra"]) if row.get("AN óra") else 0

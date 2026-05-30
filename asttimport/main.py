@@ -69,6 +69,7 @@ def main():
     parser.add_argument('--type', action='append', dest='types')
     parser.add_argument("--renew-cache")
     parser.add_argument("--renew-all-caches", action="store_true")
+    parser.add_argument("--skip-rooms", action="store_true")
     args = parser.parse_args(sys.argv[1:])
 
     set_loglevel(print_info=not args.quiet)
@@ -96,7 +97,7 @@ def main():
             save_cache(name, excel_data)
         assignment_excels_data[name] = excel_data
 
-    importer = ExcelImporter(base_excel_data, assignment_excels_data)
+    importer = ExcelImporter(base_excel_data, assignment_excels_data, not args.skip_rooms)
 
     exporter = Exporter(importer)
     exporter.write(Path("orarend.xml"))
