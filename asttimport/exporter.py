@@ -95,13 +95,14 @@ class Lesson(BaseXmlModel, tag="lesson", frozen=True):
     termsdefid: str = attr("termsdefid")
     daysdefid: str = attr("daysdefid")
     comment: str = attr("customfield1")
+    capacity: int = attr("capacity")
 
 
 class Lessons(BaseXmlModel, tag="lessons"):
     options: str = attr("options", default="primarydb,customfield1:Comment")
     columns: str = attr(
         "columns",
-        default="id,subjectid,groupids,classids,teacherids,classroomids,durationperiods,periodsperweek,termsdefid,daysdefid",
+        default="id,subjectid,groupids,classids,teacherids,classroomids,durationperiods,periodsperweek,termsdefid,daysdefid,capacity",
     )
     lessons: list[Lesson]
 
@@ -347,6 +348,7 @@ class Exporter:
                             termsdefid=terms_mapping[assignment.term].id,
                             daysdefid=normal_day_def,
                             comment=assignment.comment,
+                            capacity=assignment.capacity,
                         )
                     )
                 if assignment.active_day_count and False:
@@ -373,7 +375,7 @@ class Exporter:
                             termsdefid=terms_mapping[assignment.term].id,
                             daysdefid=active_day_mapping[assignment.classes[0].grade],
                             comment=assignment.comment,
-
+                            capacity=assignment.capacity,
                         )
                     )
                 if assignment.double_count:
@@ -400,6 +402,7 @@ class Exporter:
                             termsdefid=terms_mapping[assignment.term].id,
                             daysdefid=normal_day_def,
                             comment=assignment.comment,
+                            capacity=assignment.capacity,
                         )
                     )
             else:
@@ -423,6 +426,7 @@ class Exporter:
                         termsdefid=terms_mapping[assignment.term].id,
                         daysdefid=normal_day_def,
                         comment=assignment.comment,
+                        capacity=assignment.capacity,
                     )
                 )
 

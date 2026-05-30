@@ -167,6 +167,15 @@ class Assignment:
             )
 
     @property
+    def capacity(self) -> int:
+        if self.groups:
+            return sum([c.capacity for c in self.groups])
+        elif self.classes:
+            return sum([c.capacity for c in self.classes])
+        return 0
+
+
+    @property
     def key(self):
         key = [
             self.subject.name,
