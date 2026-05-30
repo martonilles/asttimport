@@ -67,11 +67,19 @@ def main():
     parser.add_argument('-q', '--quiet', action='store_true')
     parser.add_argument('-g', '--groups', action='store_true')
     parser.add_argument('--type', action='append', dest='types')
+    parser.add_argument("--renew-cache")
+    parser.add_argument("--renew-all-caches", action="store_true")
     args = parser.parse_args(sys.argv[1:])
 
     set_loglevel(print_info=not args.quiet)
 
     service = authenticate()
+
+    if args.renew_all_caches:
+        os.environ["USE_CACHE"] = "0"
+
+    if args.renew_cache:
+        os.environ["RENEW_CACHE"] = args.renew_cache
 
     base_excel_data = load_cache("base")
     if base_excel_data is None:
