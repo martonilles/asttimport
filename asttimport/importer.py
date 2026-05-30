@@ -367,7 +367,7 @@ class ExcelImporter:
                 classroom_types = {classroom_type}
                 if classroom_type == "Kisterem":
                     classroom_types.add("Osztályterem")
-                if classroom_type == "Tornaterem":
+                if classroom_type == "Tornaterem" and grade > 4:
                     classroom_types.add("Aula")
 
                 classrooms = self._get_classrooms(grade, classroom_types)
