@@ -9,7 +9,7 @@ from pathlib import Path
 from asttimport.downloader import get_timetable_excel, authenticate
 from asttimport.exporter import Exporter
 from asttimport.importer import ExcelImporter
-from asttimport.utils import info, error, set_loglevel
+from asttimport.utils import info, error, set_loglevel, warning
 
 CACHE_DIR = Path(".cache")
 
@@ -32,6 +32,17 @@ ASSIGNMENT_EXCEL_IDS: dict[str, str] = {
     "tortenelem": "1CwvlIUBbfPBkRKnE4znMaqCkhMJ6Q9L6EIKQ81EjpcY",
     "vizu": "1Y7Hg_y58FoWYnaVSPorixGMeCaSyAeZ5BouzLKYWnZg",
 }
+
+SUBJECTS_WITHOUT_TEACHER = {
+    "Ebéd",
+}
+
+SUBJECTS_WITHOUT_CLASSROOM = {
+    "Testnevelés DU",
+    "Ebéd",
+}
+
+
 
 
 def get_cache_path(name: str) -> Path:
@@ -181,6 +192,12 @@ def main():
 
     assignments = {}
     for assignment in importer.assignments:
+        if assignment.classes and not assignment.teachers and assignment.subject.base_name not in SUBJECTS_WITHOUT_TEACHER:
+            error(f"Missing teachers for {assignment.subject.name} in {','.join([c.name for c in assignment.classes])}")
+
+        if assignment.classes and not assignment.classrooms and assignment.subject.base_name not in SUBJECTS_WITHOUT_CLASSROOM:
+            error(f"Missing classroom for {assignment.subject.name} in {','.join([c.name for c in assignment.classes])} {[g.name for g in assignment.groups]}")
+
         if assignment.key in assignments:
             error(
                 "DUPLICATE:", assignment.key

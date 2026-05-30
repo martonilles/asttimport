@@ -15,7 +15,7 @@ from asttimport.models import (
     MetaClass,
     Term,
 )
-from asttimport.utils import parse_timeslots, info, error, warning, FACT_TIMESLOTS
+from asttimport.utils import parse_timeslots, info, error, warning, FACT_TIMESLOTS, row_summary
 
 
 class ExcelImporter:
@@ -187,7 +187,7 @@ class ExcelImporter:
         data = self._convert_to_named_list(worksheet)
         for row in data:
             if row["Speciális"].strip() != "":
-                warning(f"Skipping importing special classroom {row}")
+                warning(f"Skipping importing special classroom {row_summary(row)}")
                 continue
             yield Classroom(
                 name=row["Terem"],
@@ -278,7 +278,7 @@ class ExcelImporter:
         assignments: list[Assignment] = []
         for row in data:
             if row.get("Import"):
-                warning(f"Skip importing assignment '{row['Import']}': '{row}'")
+                warning(f"Skip importing assignment '{row['Import']}': '{row_summary(row)}'")
                 continue
 
             try:
@@ -295,7 +295,7 @@ class ExcelImporter:
                         [class_] if isinstance(class_, Class) else class_.classes
                     )
             except KeyError:
-                error(f"Missing class: '{row['Osztály']}' -> {row}")
+                error(f"Missing class: '{row['Osztály']}' -> {row_summary(row)}")
                 continue
 
             group_names = [
@@ -322,7 +322,7 @@ class ExcelImporter:
             try:
                 subject = self.subjects[row["Tantárgy"]]
             except KeyError as e:
-                error(f"Missing subject: '{e}' -> {row}")
+                error(f"Missing subject: '{e}' -> {row_summary(row)}")
                 continue
 
             if fact:
@@ -343,13 +343,13 @@ class ExcelImporter:
                     else []
                 )
             except KeyError as e:
-                error(f"Missing teacher: '{e}' -> {row}")
+                error(f"Missing teacher: '{e}' -> {row_summary(row)}")
                 continue
 
             try:
                 weekly_count = int(row["Óraszám"])
             except ValueError as e:
-                error(f"Invalid weekly_count ({e}): '{row['Óraszám']}' -> {row}")
+                error(f"Invalid weekly_count ({e}): '{row['Óraszám']}' -> {row_summary(row)}")
                 continue
 
             classroom_type = row["Terem tipus"].strip()
@@ -375,7 +375,7 @@ class ExcelImporter:
 
                     classrooms = self._get_classrooms(grade, classroom_types)
                     if not classrooms:
-                        warning(f"No classrooms found for lesson '{row}'")
+                        warning(f"No classrooms found for lesson '{row_summary(row)}'")
             else:
                 classrooms = []
 
@@ -402,7 +402,7 @@ class ExcelImporter:
                         classrooms=classrooms,
                         weekly_count=weekly_count,
                         comment=row["Megjegyzés"],
-                        timeslots=parse_timeslots(timeslot_data, str(row)),
+                        timeslots=parse_timeslots(timeslot_data, row_summary(row)),
                         fact=fact,
                         teachers=teachers,
                         groups=groups,
@@ -413,7 +413,7 @@ class ExcelImporter:
                     )
                 )
             except ValueError as e:
-                error(f"{e} -> {row}")
+                error(f"{e} -> {row_summary(row)}")
 
         return assignments
 

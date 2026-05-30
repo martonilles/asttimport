@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Any
 
 
 def clean_id(base: str) -> str:
@@ -22,7 +23,10 @@ PREF_MAP = {
 NUM_PERIODS = 11
 
 
-PRINT_INFO = True
+PRINT_INFO = False
+
+def row_summary(row: dict[str, Any]) -> str:
+    return '-'.join(str(v).replace('\n', ' ') for v in row.values() if str(v))
 
 def set_loglevel(print_info: bool = True):
     global PRINT_INFO
