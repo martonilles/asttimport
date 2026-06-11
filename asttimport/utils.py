@@ -52,8 +52,8 @@ def get_timeoff(data: dict[int, dict[int, str]], default) -> str:
         day_data = ""
         for period in range(NUM_PERIODS):
             v = data[day][period]
-            if period == 0:
-                v = "."
+           # if period == 0:
+            #    v = zero
             day_data += v if v != "X" else default
         daya_datas.append(day_data)
 
@@ -66,9 +66,13 @@ def parse_timeslots(data: str, debug: str = "") -> str | None:
 
     timeslots = defaultdict(lambda: defaultdict(lambda: "X"))
     prefs = set()
+    allow_zero: bool = False
 
     def update(day: int | None, period: int | None, value: str):
+        nonlocal allow_zero
         prefs.add(value)
+        if period == 0 and value != "0":
+            allow_zero = True
         if day is not None:
             if period is not None:
                 timeslots[day][period] = value
@@ -78,6 +82,10 @@ def parse_timeslots(data: str, debug: str = "") -> str | None:
         else:
             for d in DAYS.values():
                 timeslots[d][period] = value
+
+    update(day=None, period=0, value="0")
+    prefs = set()
+    allow_zero = False
 
     # info(f"Parsing timeslot '{data}'")
     try:
@@ -115,6 +123,9 @@ def parse_timeslots(data: str, debug: str = "") -> str | None:
         error(f"Invalid timeslot default '{data}' {prefs=}")
 
     default = "0" if "1" in prefs else "1"
+    
+    if not allow_zero:
+        update(day=None, period=0, value="0")
 
     timeoff = get_timeoff(timeslots, default)
 
@@ -123,4 +134,5 @@ def parse_timeslots(data: str, debug: str = "") -> str | None:
 
 
 ALL_TIMESLOTS = parse_timeslots(",".join([f"{d}+" for d in DAYS.keys()]))
+ALL_AND_ZERO_TIMESLOTS = parse_timeslots(",".join([f"{d}+" for d in DAYS.keys()]) + ",0+")
 FACT_TIMESLOTS = parse_timeslots("1,2")

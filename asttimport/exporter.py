@@ -181,7 +181,7 @@ class Exporter:
     def build(self):
         periods = [
             Period(period=str(period), name=str(period), short=str(period))
-            for period in range(1, NUM_PERIODS)
+            for period in range(0, NUM_PERIODS)
         ]
 
         full_year = TermsDefinition(
@@ -314,6 +314,9 @@ class Exporter:
 
                 if normal_count > 5:
                     warning(f"High number of normal hour count {normal_count=} {assignment=}")
+
+                if assignment.active_day_count:
+                    warning(f"Active day assignments {assignment.subject.name} {assignment.active_day_count} {[(g.class_.name, g.name) for g in assignment.groups]}")
 
                 if any(group.name.startswith("faktX/") for group in assignment.groups):
                     warning(f"Skipping special fact {[c.name for c in assignment.classes]} {assignment.subject.name} {normal_count=} {assignment.double_count=}")

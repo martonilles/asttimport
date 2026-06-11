@@ -2,7 +2,7 @@ import dataclasses
 import uuid
 from enum import Enum
 
-from asttimport.utils import clean_id, ALL_TIMESLOTS
+from asttimport.utils import clean_id, ALL_TIMESLOTS, ALL_AND_ZERO_TIMESLOTS
 
 # TIMESLOTS = dict[int, dict[int, str]]
 TIMESLOTS = str | None
@@ -56,7 +56,7 @@ class Classroom:
     @property
     def timeoff(self):
         if self.timeslots is None:
-            return ALL_TIMESLOTS
+            return ALL_AND_ZERO_TIMESLOTS
         return self.timeslots
 
     @property
