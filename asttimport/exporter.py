@@ -4,7 +4,7 @@ from pydantic_xml import BaseXmlModel, attr
 
 from asttimport.importer import ExcelImporter
 from asttimport.models import Term, Assignment
-from asttimport.utils import NUM_PERIODS, info, warning
+from asttimport.utils import NUM_PERIODS, info, warning, error
 
 
 class Teacher(BaseXmlModel, tag="teacher"):
@@ -74,12 +74,13 @@ class Group(BaseXmlModel, tag="group", frozen=True):
     classid: str = attr("classid")
     entireclass: str = attr("entireclass")
     divisiontag: str = attr("divisiontag")
-    studentcount: int = attr("studentcount")
+    #studentcount: int = attr("studentcount")
 
 
 class Groups(BaseXmlModel, tag="groups"):
     options: str = attr("options", default="primarydb")
-    columns: str = attr("columns", default="id,name,classid,entireclass,divisiontag,studentcount")
+#    columns: str = attr("columns", default="id,name,classid,entireclass,divisiontag,studentcount")
+    columns: str = attr("columns", default="id,name,classid,entireclass,divisiontag")
     groups: list[Group]
 
 
@@ -303,7 +304,7 @@ class Exporter:
             normal_day_def = normal_day_mapping.get(assignment.classes[0].grade, "X") if assignment.classes else "X"
 
             if assignment.classroom_count > 1:
-                warning(f"Multi-classroom assignment {assignment.classroom_count} {assignment.subject.name}")
+                error(f"Multi-classroom assignment {assignment.classroom_count} {assignment.subject.name}")
 
             if assignment.double_count or assignment.active_day_count:
                 normal_count = (
@@ -315,8 +316,8 @@ class Exporter:
                 if normal_count > 5:
                     warning(f"High number of normal hour count {normal_count=} {assignment=}")
 
-                if assignment.active_day_count:
-                    warning(f"Active day assignments {assignment.subject.name} {assignment.active_day_count} {[(g.class_.name, g.name) for g in assignment.groups]}")
+                #if assignment.active_day_count:
+                #    warning(f"Active day assignments {assignment.subject.name} {assignment.active_day_count} {[(g.class_.name, g.name) for g in assignment.groups]}")
 
                 if any(group.name.startswith("faktX/") for group in assignment.groups):
                     warning(f"Skipping special fact {[c.name for c in assignment.classes]} {assignment.subject.name} {normal_count=} {assignment.double_count=}")
