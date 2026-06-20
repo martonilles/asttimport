@@ -35,6 +35,7 @@ ASSIGNMENT_EXCEL_IDS: dict[str, str] = {
 
 SUBJECTS_WITHOUT_TEACHER = {
     "Ebéd",
+    "Pihenő",
 }
 
 SUBJECTS_WITHOUT_CLASSROOM = {
@@ -189,6 +190,24 @@ def main():
             for base, groups in sorted(group_bases.items(), key=lambda x: x[0]):
                 print(f"  - {base}: {len(groups)}:", ", ".join(sorted(groups)))
 
+    active_day_assignments = defaultdict(lambda : defaultdict(lambda: defaultdict(lambda: 0)))
+    for assignment in importer.assignments:
+        if assignment.active_day_count:
+            group_names = {
+                group.name
+                for group in assignment.groups
+            }
+            if len(group_names) > 1:
+                error(f"Active day on different group name {assignment}")
+            group_name = group_names.pop()
+            active_day_assignments[assignment.classes[0]][assignment.subject.name][group_name] += assignment.active_day_count
+
+    for class_, subject_group_hours in active_day_assignments.items():
+        warning(f"Active day assignments for {class_.name}:")
+        for subject_name, group_hours in sorted(subject_group_hours.items(), key=lambda x: x[0]):
+            total_hours = sum(group_hours.values())
+            num_groups = len(group_hours)
+            warning(f"  {subject_name}: {int(total_hours/num_groups)}   ({total_hours=} {num_groups=})")
 
     assignments = {}
     for assignment in importer.assignments:
