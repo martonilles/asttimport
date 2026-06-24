@@ -400,6 +400,7 @@ class ExcelImporter:
                         subject=subject,
                         classes=classes,
                         classrooms=classrooms,
+                        classroom_type=classroom_type,
                         weekly_count=weekly_count,
                         comment=row["Megjegyzés"],
                         timeslots=parse_timeslots(timeslot_data, row_summary(row)),

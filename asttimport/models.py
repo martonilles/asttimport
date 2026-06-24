@@ -148,6 +148,7 @@ class Assignment:
     subject: Subject
     teachers: list[Teacher]
     classrooms: list[Classroom]
+    classroom_type: str
     classes: list[Class]
     groups: list[Group]
     weekly_count: int
@@ -178,7 +179,9 @@ class Assignment:
     @property
     def key(self):
         key = [
+            self.term.name,
             self.subject.name,
+            self.classroom_type,
             self.weekly_count,
             *[c.name for c in self.classes],
             *[t.name for t in self.teachers],
