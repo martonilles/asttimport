@@ -14,12 +14,17 @@ def load(filename: str):
         'extra',
     ]
 
+    skiped_subjects = {
+        "nem választok",
+        # "vizuális kultúra"
+    }
+
 
     with open(filename, mode='rt', encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
             for col in cols:
-                if row[col] and "nem választok" not in row[col]:
+                if row[col] and all(skipped not in row[col] for skipped in skiped_subjects):
                     diakok[row['E-mail-cím']].append(row[col])
 
     return diakok
@@ -210,11 +215,15 @@ def optimize_schedule_flexible(
 def main():
     timetable = optimize_schedule_flexible(
             student_selections=load(sys.argv[1]),
-            subject_config={},
-            default_split_threshold=15,  # Fallback for Science, English, etc.
+            subject_config={
+                "Janó-matematika": {"max_teachers": 1},
+                "matematika": {"max_teachers": 1},
+                "magyar nyelv és irodalom": {"min_class_size": 5},
+            },
+            default_split_threshold=11,  # Fallback for Science, English, etc.
             default_max_teachers=2,
-            default_max_class_size=20,
-            default_min_class_size=0,
+            default_max_class_size=14,
+            default_min_class_size=6,
             num_timeslots=3,
         )
 
