@@ -368,12 +368,18 @@ class ExcelImporter:
                 else:
                     grade = max(class_.grade for class_ in classes)
                     classroom_types = {classroom_type}
-                    if classroom_type == "Kisterem":
+                    if classroom_type == "Kisterem" and grade > 4:
                         classroom_types.add("Osztályterem")
                     if classroom_type == "Tornaterem" and grade > 4:
                         classroom_types.add("Aula")
 
                     classrooms = self._get_classrooms(grade, classroom_types)
+                    if classroom_type == "Kisterem" and grade <= 4:
+                        classrooms.extend([
+                            classroom
+                            for class_ in classes
+                            for classroom in class_.classrooms
+                        ])
                     if not classrooms:
                         warning(f"No classrooms found for lesson '{row_summary(row)}'")
             else:
