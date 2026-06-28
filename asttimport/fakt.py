@@ -15,7 +15,7 @@ def load(filename: str):
     ]
 
 
-    with open(filename, mode='r') as file:
+    with open(filename, mode='rt', encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
             for col in cols:
@@ -201,12 +201,14 @@ def optimize_schedule_flexible(
 
         if not has_unfulfilled:
             print("  🎉 Perfect fit! Every single student got all choices.")
+
+        return timetable
     else:
         print("No feasible schedule found.")
 
 
 def main():
-    optimize_schedule_flexible(
+    timetable = optimize_schedule_flexible(
             student_selections=load(sys.argv[1]),
             subject_config={},
             default_split_threshold=15,  # Fallback for Science, English, etc.
@@ -215,4 +217,14 @@ def main():
             default_min_class_size=0,
             num_timeslots=3,
         )
+
+    if timetable is not None:
+        with open("fakt-out.csv", "w+") as f:
+            csv_writer = csv.writer(f, dialect="excel", lineterminator="\n")
+            csv_writer.writerow(("timeslot", "subject", "student"))
+            for t, subjects_students in timetable.items():
+                for subject, students in subjects_students.items():
+                    for student in students:
+                        csv_writer.writerow((t, subject, student))
+
 
