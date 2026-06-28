@@ -144,13 +144,15 @@ class Period(BaseXmlModel, tag="period", frozen=True):
     period: str = attr("period")
     name: str = attr("name")
     short: str = attr("short")
+    start_time: str = attr("starttime")
+    end_time: str = attr("endtime")
 
 
 class Periods(BaseXmlModel, tag="periods", frozen=True):
     options: str = attr("options", default="primarydb")
     columns: str = attr(
         "columns",
-        default="period,name,short",
+        default="period,name,short,starttime,endtime",
     )
     definitions: list[Period]
 
@@ -170,6 +172,20 @@ class Timetable(BaseXmlModel, tag="timetable"):
     lessons: Lessons
 
 
+PERIODS_START_END = {
+    0: ("7:30", "8:10"),
+    1: ("8:15", "9:00"),
+    2: ("9:10", "9:55"),
+    3: ("10:10", "10:50"),
+    4: ("11:00", "11:40"),
+    5: ("11:50", "12:30"),
+    6: ("12:40", "13:20"),
+    7: ("13:40", "14:20"),
+    8: ("14:30", "15:10"),
+    9: ("15:20", "16:00"),
+    10: ("16:10", "16:50"),
+}
+
 class Exporter:
     def __init__(self, importer: ExcelImporter):
         self.teachers = importer.teachers
@@ -181,7 +197,7 @@ class Exporter:
 
     def build(self):
         periods = [
-            Period(period=str(period), name=str(period), short=str(period))
+            Period(period=str(period), name=str(period), short=str(period), start_time=PERIODS_START_END[period][0], end_time=PERIODS_START_END[period][1])
             for period in range(0, NUM_PERIODS)
         ]
 
