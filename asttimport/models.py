@@ -182,13 +182,13 @@ class Assignment:
             self.term.name,
             self.subject.name,
             self.classroom_type,
-            self.weekly_count,
             *[c.name for c in self.classes],
             *[t.name for t in self.teachers],
-            *[g.id for g in self.groups],
+            *[g.name for g in self.groups],
         ]
         return tuple(key)
 
     @property
     def id(self):
-        return str(self._id)
+        key_id = "_".join(self.key)
+        return clean_id(f"A_{key_id}")
