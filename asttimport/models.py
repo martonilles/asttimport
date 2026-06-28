@@ -1,4 +1,5 @@
 import dataclasses
+import hashlib
 import uuid
 from enum import Enum
 
@@ -190,5 +191,6 @@ class Assignment:
 
     @property
     def id(self):
-        key_id = "_".join(self.key)
-        return clean_id(f"A_{key_id}")
+        key_id = "_".join(sorted(self.key))
+        return hashlib.md5(key_id.encode()).hexdigest()
+        #return clean_id(f"A_{key_id}")
