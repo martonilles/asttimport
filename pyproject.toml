@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 asttimporter = "asttimport.main:main"
 fakt = "asttimport.fakt:main"
+kreta = "asttimport.kreta:main"
 
 [build-system]
 build-backend = "setuptools.build_meta"
